@@ -1,0 +1,23 @@
+# Python virtual environment & binaries (installed automatically by Install.bat)
+server/.venv/
+server/bin/
+server/temp_cookies/
+server/__pycache__/
+*.pyc
+*.pyo
+
+# Runtime state, logs & user local settings (never commit personal data)
+server/jobs_history.json
+server/config.json
+server/server.log
+server/server.pid
+
+# Local fallback downloads & build outputs
+Downloads/
+dist/
+build/
+
+# OS junk
+.DS_Store
+Thumbs.db
+desktop.ini

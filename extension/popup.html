@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LibertyGrab — محمّل الفيديوهات الشامل</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <!-- الشريط العلوي بهوية Liberty الرسمية -->
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-logo" aria-hidden="true">
+          <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M10 35 L18 35 L18 46 L41 46 L34 54 L16 54 L10 48 Z" fill="#F8FAFC"/>
+            <path d="M46 35 L54 35 L54 48 L48 54 L38 54 L46 46 Z" fill="#94A3B8"/>
+            <path d="M27 9 L32 9 L32 41 L17 26 L27 26 Z" fill="#E07020"/>
+            <path d="M32 9 L37 9 L37 26 L47 26 L32 41 Z" fill="#F08232"/>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <h1>LibertyGrab</h1>
+          <span>محمّل الفيديوهات الشامل</span>
+        </div>
+      </div>
+
+      <div class="topbar-actions">
+        <button id="engineStatusBtn" type="button" class="status-pill checking" title="اضغط لعرض حالة محرك LibertyGrab المحلي">
+          <span class="status-dot"></span>
+          <span id="engineStatusText">جاري الفحص...</span>
+        </button>
+        <button id="openFolderTopBtn" type="button" class="icon-btn" title="فتح مجلد حفظ الفيديوهات">
+          <svg viewBox="0 0 24 24" fill="none">
+            <path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- تنبيه تشغيل المحرك المحلي -->
+    <section id="offlineBanner" class="offline-banner hidden">
+      <div class="offline-title">⚡ محرك LibertyGrab المحلي غير قيد التشغيل حالياً</div>
+      <p>
+        لدعم يوتيوب وفيسبوك وتيك توك وإنستجرام وX ودمج جودات <strong>1080p / 4K / MP3</strong>، شغّل ملف
+        <code>Start-Engine.vbs</code> الموجود داخل مجلد الأداة، ثم اضغط إعادة الفحص.
+      </p>
+      <div class="offline-actions">
+        <button id="retryEngineBtn" type="button" class="btn-secondary btn-sm">إعادة فحص الاتصال</button>
+        <button id="switchToSnifferBtn" type="button" class="btn-ghost btn-sm">استخدام التقاط المتصفح المباشر</button>
+      </div>
+    </section>
+
+    <!-- التبويبات الرئيسية -->
+    <nav class="tabs-nav" role="tablist">
+      <button type="button" class="tab-btn active" data-tab="smart">
+        <span>التحميل الذكي</span>
+      </button>
+      <button type="button" class="tab-btn" data-tab="sniffer">
+        <span>التقاط الصفحة</span>
+        <span id="snifferCountBadge" class="badge hidden">0</span>
+      </button>
+      <button type="button" class="tab-btn" data-tab="downloads">
+        <span>التحميلات</span>
+        <span id="activeJobsBadge" class="badge badge-copper hidden">0</span>
+      </button>
+    </nav>
+
+    <!-- التبويب 1: التحميل الذكي للمواقع -->
+    <main id="tab-smart" class="tab-panel active">
+      <div class="url-box">
+        <input
+          id="urlInput"
+          type="url"
+          dir="ltr"
+          placeholder="https://www.youtube.com/watch?v=..."
+          autocomplete="off"
+          spellcheck="false"
+        />
+        <button id="analyzeBtn" type="button" class="btn-analyze" title="فحص الجودات المتاحة">
+          فحص
+        </button>
+      </div>
+
+      <!-- حالة الفحص -->
+      <div id="infoLoadingState" class="state-card hidden">
+        <div class="spinner"></div>
+        <div class="state-text">
+          <strong>جاري فحص الفيديو واستخراج الجودات...</strong>
+          <span>ندعم يوتيوب، فيسبوك، إنستجرام، تيك توك، X، وأكثر من 1000 موقع</span>
+        </div>
+      </div>
+
+      <!-- بطاقة معاينة الفيديو -->
+      <div id="videoCard" class="video-card hidden">
+        <div class="thumb-wrap">
+          <img id="videoThumb" alt="صورة مصغرة للفيديو" />
+          <div id="thumbFallback" class="thumb-fallback hidden">🎬</div>
+          <span id="videoDuration" class="meta-chip duration-chip hidden"></span>
+          <span id="videoSite" class="meta-chip site-chip hidden"></span>
+        </div>
+        <div class="video-details">
+          <h2 id="videoTitle" class="video-title">عنوان الفيديو</h2>
+          <p id="videoUploader" class="video-uploader"></p>
+        </div>
+      </div>
+
+      <!-- رسالة تنبيه لطيفة -->
+      <div id="infoErrorBox" class="alert-box hidden">
+        <span id="infoErrorText"></span>
+      </div>
+
+      <!-- اختيار الجودة وزر التحميل -->
+      <div id="downloadControls" class="controls-card">
+        <label class="field-label" for="qualitySelect">اختر الجودة أو الصيغة المطلوبة:</label>
+        <div class="select-wrap">
+          <select id="qualitySelect">
+            <option value="best">أفضل جودة متاحة تلقائياً (MP4)</option>
+            <option value="2160">4K Ultra HD (2160p)</option>
+            <option value="1080">Full HD (1080p)</option>
+            <option value="720">HD عالي الجودة (720p)</option>
+            <option value="480">متوسط (480p)</option>
+            <option value="360">اقتصادي سريع (360p)</option>
+            <option value="audio_mp3">ملف صوتي فقط (MP3 - 192kbps)</option>
+          </select>
+        </div>
+
+        <button id="startDownloadBtn" type="button" class="btn-primary">
+          <svg viewBox="0 0 24 24" fill="none" class="btn-svg">
+            <path d="M12 4v11m0 0l-4-4m4 4l4-4M5 19h14" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <span id="startDownloadBtnText">بدء التحميل الآن</span>
+        </button>
+      </div>
+
+      <!-- إعدادات سريعة -->
+      <div class="settings-card">
+        <label class="toggle-row">
+          <div class="toggle-info">
+            <span class="toggle-title">استخدام جلسة تسجيل الدخول</span>
+            <span class="toggle-desc">ضروري لفيديوهات فيسبوك وإنستجرام وتيك توك المفتوحة بحسابك</span>
+          </div>
+          <input id="useCookiesToggle" type="checkbox" checked />
+          <span class="toggle-slider"></span>
+        </label>
+
+        <label class="toggle-row">
+          <div class="toggle-info">
+            <span class="toggle-title">زر «تحميل الفيديو» العائم بالصفحة</span>
+            <span class="toggle-desc">يظهر تلقائياً عند تمرير الماوس فوق أي مشغل فيديو</span>
+          </div>
+          <input id="floatingBtnToggle" type="checkbox" checked />
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+    </main>
+
+    <!-- التبويب 2: الفيديوهات الملتقطة مباشرة من الصفحة والشبكة -->
+    <section id="tab-sniffer" class="tab-panel">
+      <div class="panel-header">
+        <span>الفيديوهات ومشغلات البث المكتشفة بالصفحة</span>
+        <button id="refreshSnifferBtn" type="button" class="link-btn">فحص الآن ↻</button>
+      </div>
+
+      <div id="snifferEmpty" class="empty-state">
+        <div class="empty-icon">📡</div>
+        <strong>لم يتم رصد فيديوهات في هذه الصفحة بعد</strong>
+        <p>شغّل الفيديو داخل الصفحة ثم اضغط «فحص الآن»، أو استخدم تبويب «التحميل الذكي».</p>
+      </div>
+
+      <div id="snifferList" class="media-list"></div>
+    </section>
+
+    <!-- التبويب 3: قائمة التحميلات الجارية والمكتملة -->
+    <section id="tab-downloads" class="tab-panel">
+      <!-- بطاقة مكان حفظ الفيديوهات -->
+      <div class="folder-card">
+        <div class="folder-card-top">
+          <span class="folder-card-label">📂 مكان حفظ الفيديوهات:</span>
+          <div class="folder-card-links">
+            <button id="pickFolderBtn" type="button" class="link-btn">تصفح مجلد...</button>
+            <span class="sep">•</span>
+            <button id="cleanTempBtn" type="button" class="link-btn">تنظيف البقايا</button>
+          </div>
+        </div>
+        <div class="folder-input-row">
+          <input
+            id="downloadDirInput"
+            type="text"
+            dir="ltr"
+            placeholder="C:\Users\...\Downloads\VideoDownloader"
+            spellcheck="false"
+          />
+          <button id="saveFolderBtn" type="button" class="btn-analyze btn-save-folder">حفظ</button>
+        </div>
+      </div>
+
+      <div class="panel-header">
+        <span>قائمة التحميلات</span>
+        <div class="panel-header-btns">
+          <button id="clearFinishedBtn" type="button" class="link-btn">مسح المكتمل</button>
+        </div>
+      </div>
+
+      <div id="jobsEmpty" class="empty-state">
+        <div class="empty-icon">📥</div>
+        <strong>لا توجد تحميلات حالياً</strong>
+        <p>ابدأ بتحميل أي فيديو لمتابعة السرعة ونسبة الإنجاز لحظة بلحظة من هنا.</p>
+      </div>
+
+      <div id="jobsList" class="jobs-list"></div>
+    </section>
+
+    <!-- إشعار سفلي سريع -->
+    <div id="popupToast" class="popup-toast hidden"></div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

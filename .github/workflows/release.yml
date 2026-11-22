@@ -7,9 +7,9 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Release tag version (e.g. v1.1.0)"
+        description: "Release tag version (e.g. v1.1.1)"
         required: false
-        default: "v1.1.0"
+        default: "v1.1.1"
 
 permissions:
   contents: write
@@ -33,16 +33,18 @@ jobs:
           python -m pip install --upgrade pip
           pip install "yt-dlp[default]" imageio-ffmpeg pyinstaller
 
-      - name: Build LibertyGrab-Engine.exe, Extension ZIPs, and LibertyGrab-Setup.exe
+      - name: Build LibertyGrab-Setup.exe and Extension ZIPs
         shell: pwsh
         run: |
           .\installer\build-windows.ps1
 
-      - name: Verify release artifacts
+      - name: Package Installer ZIP and verify artifacts
         shell: pwsh
         run: |
+          Compress-Archive -Path .\dist\LibertyGrab-Setup.exe -DestinationPath .\dist\LibertyGrab-Setup-Windows.zip -Force
           Get-ChildItem .\dist -File | Format-Table Name, Length
           if (-not (Test-Path .\dist\LibertyGrab-Setup.exe)) { throw "Missing LibertyGrab-Setup.exe" }
+          if (-not (Test-Path .\dist\LibertyGrab-Setup-Windows.zip)) { throw "Missing LibertyGrab-Setup-Windows.zip" }
           if (-not (Test-Path .\dist\LibertyGrab-Full-Extension.zip)) { throw "Missing LibertyGrab-Full-Extension.zip" }
           if (-not (Test-Path .\dist\LibertyGrab-ChromeStore-Extension.zip)) { throw "Missing LibertyGrab-ChromeStore-Extension.zip" }
 
@@ -56,15 +58,17 @@ jobs:
             ## LibertyGrab — Universal Browser Video Downloader
 
             ### Downloads
-            - **`LibertyGrab-Setup.exe`** — 1-click Windows Installer (includes bundled `yt-dlp` + `FFmpeg` + auto-start + extension files; **no Python required!**).
-            - **`LibertyGrab-Full-Extension.zip`** — Full Chromium Extension (for `Load unpacked` in Chrome / Edge / Brave).
+            - **`LibertyGrab-Setup-Windows.zip`** *(Recommended)* — Contains `LibertyGrab-Setup.exe` (1-click Windows Setup Wizard with bundled `yt-dlp` + `FFmpeg`, **no Python required**).
+            - **`LibertyGrab-Setup.exe`** — Direct Windows Setup Wizard installer.
+            - **`LibertyGrab-Full-Extension.zip`** — Full Chromium Extension (`Load unpacked` in Chrome / Edge / Brave).
             - **`LibertyGrab-ChromeStore-Extension.zip`** — Chrome Web Store compliant build.
 
             ### Quick Install (Windows)
-            1. Download and run **`LibertyGrab-Setup.exe`** (`Next -> Next -> Finish`).
-            2. Open `chrome://extensions` (or `edge://extensions`), enable **Developer mode**, click **Load unpacked**, and choose `%LocalAppData%\LibertyGrab\extension`.
+            1. Download **`LibertyGrab-Setup-Windows.zip`**, extract it, and run **`LibertyGrab-Setup.exe`** (`Next -> Next -> Finish`).
+               > **Note about Windows SmartScreen:** Because this is a free open-source release without a paid Windows Code Signing certificate, Windows may show *"Windows protected your PC"*. Click **More info → Run anyway**.
+            2. Open `chrome://extensions` (or `edge://extensions`), enable **Developer mode**, click **Load unpacked**, and select `%LocalAppData%\LibertyGrab\extension`.
           files: |
+            dist/LibertyGrab-Setup-Windows.zip
             dist/LibertyGrab-Setup.exe
             dist/LibertyGrab-Full-Extension.zip
             dist/LibertyGrab-ChromeStore-Extension.zip
-            dist/engine/LibertyGrab-Engine.exe

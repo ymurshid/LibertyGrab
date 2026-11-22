@@ -22,20 +22,24 @@
 
 ---
 
-## Quick Install on Windows (1 Click)
+## Quick Install on Windows (No Python Required!)
 
-1. Download or clone this repository:
+### Option A — 1-Click Windows Setup (Recommended)
+1. Download **`LibertyGrab-Setup.exe`** from the [**Latest Release**](https://github.com/ymurshid/LibertyGrab/releases/latest).
+2. Run **`LibertyGrab-Setup.exe`** (`Next -> Next -> Finish`) — includes bundled `yt-dlp` + `FFmpeg` + optional Windows AutoStart.
+3. Load the extension in **Chrome / Edge / Brave**:
+   - Navigate to `chrome://extensions` (or `edge://extensions` / `brave://extensions`).
+   - Enable **Developer mode**, click **Load unpacked**, and select `%LocalAppData%\LibertyGrab\extension`.
+
+### Option B — From Source
+1. Clone this repository:
    ```bash
    git clone https://github.com/ymurshid/LibertyGrab.git
    ```
-2. Double-click **`Install.bat`** — it automatically sets up an isolated Python `.venv`, installs `yt-dlp[default]` + bundled `FFmpeg`, starts the background engine, and opens the `extension` folder.
-3. Load the extension in **Chrome / Edge / Brave**:
-   - Navigate to `chrome://extensions` (or `edge://extensions` / `brave://extensions`).
-   - Enable **Developer mode**.
-   - Click **Load unpacked** and select the `extension` folder.
-   - Pin **LibertyGrab** to your browser toolbar.
+2. Double-click **`Install.bat`** — automatically sets up Python `.venv`, installs `yt-dlp[default]` + `FFmpeg`, starts the background engine, and opens the `extension` folder.
 
-> For full Arabic instructions, see [README-AR.md](README-AR.md).
+> - For Arabic instructions, see [README-AR.md](README-AR.md).
+> - For Chrome Web Store publishing & Store build, see [CHROME_WEB_STORE_GUIDE.md](CHROME_WEB_STORE_GUIDE.md) and [PRIVACY_POLICY.md](PRIVACY_POLICY.md).
 
 ---
 

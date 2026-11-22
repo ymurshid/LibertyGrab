@@ -1,13 +1,24 @@
 // Liberty Video Downloader — Popup Controller (Arabic RTL)
 
 (() => {
+  const APP_CFG = self.LIBERTYGRAB_CONFIG || {
+    edition: "full",
+    allowYoutube: true,
+    engineReleaseUrl: "https://github.com/ymurshid/LibertyGrab/releases/latest"
+  };
+
+  function isBlockedStoreDomain(url) {
+    if (APP_CFG.allowYoutube) return false;
+    return /(^https?:\/\/)?([a-z0-9-]+\.)?(youtube\.com|youtu\.be|youtube-nocookie\.com)(\/|$)/i.test(url || "");
+  }
+
   const els = {
     engineStatusBtn: document.getElementById("engineStatusBtn"),
     engineStatusText: document.getElementById("engineStatusText"),
     openFolderTopBtn: document.getElementById("openFolderTopBtn"),
     offlineBanner: document.getElementById("offlineBanner"),
+    downloadEngineBtn: document.getElementById("downloadEngineBtn"),
     retryEngineBtn: document.getElementById("retryEngineBtn"),
-    switchToSnifferBtn: document.getElementById("switchToSnifferBtn"),
     tabBtns: Array.from(document.querySelectorAll(".tab-btn")),
     tabPanels: {
       smart: document.getElementById("tab-smart"),
@@ -154,6 +165,14 @@
       return;
     }
 
+    if (isBlockedStoreDomain(url)) {
+      els.videoCard.classList.add("hidden");
+      els.infoErrorText.textContent =
+        "وفقاً لسياسة متجر Chrome Web Store، لا تدعم نسخة المتجر تحميل محتوى YouTube.";
+      els.infoErrorBox.classList.remove("hidden");
+      return;
+    }
+
     if (!state.engineOnline) {
       els.offlineBanner.classList.remove("hidden");
       return;
@@ -233,6 +252,11 @@
     const url = els.urlInput.value.trim();
     if (!url || !/^https?:\/\//i.test(url)) {
       showPopupToast("يرجى إدخال رابط فيديو صحيح أولاً");
+      return;
+    }
+
+    if (isBlockedStoreDomain(url)) {
+      showPopupToast("نسخة متجر Chrome Web Store لا تدعم التحميل من YouTube");
       return;
     }
 
@@ -559,8 +583,12 @@
     }
   });
 
+  if (els.downloadEngineBtn) {
+    els.downloadEngineBtn.addEventListener("click", () => {
+      chrome.tabs.create({ url: APP_CFG.engineReleaseUrl });
+    });
+  }
   els.retryEngineBtn.addEventListener("click", () => checkEngineStatus(true));
-  els.switchToSnifferBtn.addEventListener("click", () => switchTab("sniffer"));
   els.analyzeBtn.addEventListener("click", () => analyzeCurrentUrl());
   els.urlInput.addEventListener("keydown", (e) => {
     if (e.key === "Enter") {

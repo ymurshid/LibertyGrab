@@ -1,0 +1,70 @@
+name: Build & Publish LibertyGrab Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release tag version (e.g. v1.1.0)"
+        required: false
+        default: "v1.1.0"
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install build & runtime dependencies
+        shell: pwsh
+        run: |
+          python -m pip install --upgrade pip
+          pip install "yt-dlp[default]" imageio-ffmpeg pyinstaller
+
+      - name: Build LibertyGrab-Engine.exe, Extension ZIPs, and LibertyGrab-Setup.exe
+        shell: pwsh
+        run: |
+          .\installer\build-windows.ps1
+
+      - name: Verify release artifacts
+        shell: pwsh
+        run: |
+          Get-ChildItem .\dist -File | Format-Table Name, Length
+          if (-not (Test-Path .\dist\LibertyGrab-Setup.exe)) { throw "Missing LibertyGrab-Setup.exe" }
+          if (-not (Test-Path .\dist\LibertyGrab-Full-Extension.zip)) { throw "Missing LibertyGrab-Full-Extension.zip" }
+          if (-not (Test-Path .\dist\LibertyGrab-ChromeStore-Extension.zip)) { throw "Missing LibertyGrab-ChromeStore-Extension.zip" }
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_type == 'tag' && github.ref_name || inputs.version }}
+          name: "LibertyGrab ${{ github.ref_type == 'tag' && github.ref_name || inputs.version }}"
+          generate_release_notes: true
+          body: |
+            ## LibertyGrab — Universal Browser Video Downloader
+
+            ### Downloads
+            - **`LibertyGrab-Setup.exe`** — 1-click Windows Installer (includes bundled `yt-dlp` + `FFmpeg` + auto-start + extension files; **no Python required!**).
+            - **`LibertyGrab-Full-Extension.zip`** — Full Chromium Extension (for `Load unpacked` in Chrome / Edge / Brave).
+            - **`LibertyGrab-ChromeStore-Extension.zip`** — Chrome Web Store compliant build.
+
+            ### Quick Install (Windows)
+            1. Download and run **`LibertyGrab-Setup.exe`** (`Next -> Next -> Finish`).
+            2. Open `chrome://extensions` (or `edge://extensions`), enable **Developer mode**, click **Load unpacked**, and choose `%LocalAppData%\LibertyGrab\extension`.
+          files: |
+            dist/LibertyGrab-Setup.exe
+            dist/LibertyGrab-Full-Extension.zip
+            dist/LibertyGrab-ChromeStore-Extension.zip
+            dist/engine/LibertyGrab-Engine.exe

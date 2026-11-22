@@ -26,11 +26,18 @@ from typing import Any, Dict, List, Optional
 
 HOST = "127.0.0.1"
 PORT = 17890
-SERVER_VERSION = "1.0.0"
+SERVER_VERSION = "1.1.0"
 CLIENT_HEADER_NAME = "X-VideoGrab-Token"
 CLIENT_HEADER_VALUE = "local-v1"
 
-BASE_DIR = Path(__file__).resolve().parent
+IS_FROZEN = bool(getattr(sys, "frozen", False))
+BUNDLE_DIR = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent))
+if IS_FROZEN:
+    BASE_DIR = Path(os.environ.get("LOCALAPPDATA") or Path.home()) / "LibertyGrab"
+else:
+    BASE_DIR = Path(__file__).resolve().parent
+
+BASE_DIR.mkdir(parents=True, exist_ok=True)
 BIN_DIR = BASE_DIR / "bin"
 TEMP_COOKIES_DIR = BASE_DIR / "temp_cookies"
 HISTORY_FILE = BASE_DIR / "jobs_history.json"
@@ -160,21 +167,28 @@ def ensure_dirs() -> None:
 
 
 def resolve_ffmpeg() -> Optional[str]:
-    """يكتشف مسار ffmpeg من النظام أو من حزمة imageio-ffmpeg وينسخه كـ ffmpeg.exe ليتعرف عليه yt-dlp."""
-    local_ffmpeg = BIN_DIR / "ffmpeg.exe"
-    if local_ffmpeg.exists():
-        return str(local_ffmpeg)
+    """يكتشف مسار ffmpeg من الحزمة المجمّعة أو النظام أو imageio-ffmpeg."""
+    for candidate in (
+        BUNDLE_DIR / "bin" / "ffmpeg.exe",
+        Path(sys.executable).resolve().parent / "bin" / "ffmpeg.exe",
+        Path(sys.executable).resolve().parent / "ffmpeg.exe",
+        BIN_DIR / "ffmpeg.exe",
+    ):
+        if candidate.exists():
+            return str(candidate)
 
     sys_ffmpeg = shutil.which("ffmpeg")
     if sys_ffmpeg:
         return sys_ffmpeg
 
+    local_ffmpeg = BIN_DIR / "ffmpeg.exe"
     try:
         import imageio_ffmpeg  # type: ignore
 
         bundled_exe = Path(imageio_ffmpeg.get_ffmpeg_exe())
         if bundled_exe.exists():
             try:
+                BIN_DIR.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(bundled_exe, local_ffmpeg)
                 return str(local_ffmpeg)
             except OSError:
@@ -1011,21 +1025,39 @@ def open_in_explorer(filepath_str: str) -> None:
     subprocess.Popen(["explorer.exe", str(target_dir.resolve())])
 
 
+def _run_folder_picker_cli(initial_dir: str) -> None:
+    """وضع فرعي نظيف لفتح نافذة اختيار المجلد في ويندوز ويعمل في Python وفي نسخة .exe."""
+    import tkinter as tk
+    from tkinter import filedialog
+
+    root = tk.Tk()
+    root.withdraw()
+    root.attributes("-topmost", True)
+    chosen = filedialog.askdirectory(
+        initialdir=initial_dir,
+        title="اختر مجلد حفظ الفيديوهات - LibertyGrab",
+    )
+    root.destroy()
+    if sys.stdout and hasattr(sys.stdout, "reconfigure"):
+        try:
+            sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        except Exception:
+            pass
+    print(chosen or "", flush=True)
+
+
 def pick_folder_via_dialog() -> Optional[str]:
     """يفتح نافذة اختيار المجلد الأصلية في ويندوز عبر عملية فرعية نظيفة."""
     initial = str(get_download_dir())
-    helper_code = (
-        "import sys, tkinter as tk; "
-        "from tkinter import filedialog; "
-        "root = tk.Tk(); root.withdraw(); root.attributes('-topmost', True); "
-        "chosen = filedialog.askdirectory(initialdir=sys.argv[1], title='اختر مجلد حفظ الفيديوهات - LibertyGrab'); "
-        "root.destroy(); "
-        "print(chosen or '')"
+    cmd = (
+        [sys.executable, "--pick-folder", initial]
+        if IS_FROZEN
+        else [sys.executable, str(Path(__file__).resolve()), "--pick-folder", initial]
     )
     creationflags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
     try:
         proc = subprocess.run(
-            [sys.executable, "-c", helper_code, initial],
+            cmd,
             capture_output=True,
             text=True,
             encoding="utf-8",
@@ -1297,5 +1329,27 @@ def main() -> None:
             pass
 
 
+def request_remote_shutdown() -> None:
+    try:
+        req = urllib.request.Request(
+            f"http://{HOST}:{PORT}/api/shutdown",
+            data=b"{}",
+            method="POST",
+            headers={
+                "Content-Type": "application/json",
+                "X-Liberty-Token": CLIENT_HEADER_VALUE,
+            },
+        )
+        with urllib.request.urlopen(req, timeout=2.5):
+            pass
+    except Exception:
+        pass
+
+
 if __name__ == "__main__":
-    main()
+    if len(sys.argv) >= 2 and sys.argv[1] == "--pick-folder":
+        _run_folder_picker_cli(sys.argv[2] if len(sys.argv) >= 3 else str(get_download_dir()))
+    elif len(sys.argv) >= 2 and sys.argv[1] == "--shutdown":
+        request_remote_shutdown()
+    else:
+        main()

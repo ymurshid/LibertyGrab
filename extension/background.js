@@ -1,9 +1,17 @@
 // Liberty Video Downloader — Background Service Worker (Manifest V3)
 // يجمع بين مراقبة الشبكة (MP4 / WebM / M3U8 / MPD) والفحص الحي لكل إطارات الصفحة والتواصل مع محرك Liberty المحلي
 
+importScripts("config.js");
+
+const APP_CFG = self.LIBERTYGRAB_CONFIG || { edition: "full", allowYoutube: true };
 const ENGINE_BASE = "http://127.0.0.1:17890";
 const CLIENT_TOKEN = "local-v1";
 const BRAND_BADGE_COLOR = "#e07020";
+
+function isStoreBlockedUrl(url) {
+  if (APP_CFG.allowYoutube) return false;
+  return /(^https?:\/\/)?([a-z0-9-]+\.)?(youtube\.com|youtu\.be|youtube-nocookie\.com)(\/|$)/i.test(url || "");
+}
 
 const memoryTabMedia = new Map();
 
@@ -522,6 +530,10 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         }
 
         case "EXTRACT_INFO": {
+          if (isStoreBlockedUrl(msg.url)) {
+            sendResponse({ ok: false, error: "نسخة متجر Chrome Web Store لا تدعم التحميل من YouTube." });
+            break;
+          }
           let cookies = [];
           if (msg.useCookies && msg.url) {
             cookies = await collectSiteCookies(msg.url);
@@ -542,6 +554,10 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         }
 
         case "START_ENGINE_DOWNLOAD": {
+          if (isStoreBlockedUrl(msg.url)) {
+            sendResponse({ ok: false, error: "نسخة متجر Chrome Web Store لا تدعم التحميل من YouTube." });
+            break;
+          }
           let cookies = [];
           if (msg.useCookies && (msg.cookieUrl || msg.url)) {
             cookies = await collectSiteCookies(msg.cookieUrl || msg.url);
@@ -569,6 +585,10 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
           const pageUrl = msg.pageUrl || sender?.tab?.url || "";
           const videoUrl = msg.videoUrl || "";
           const title = msg.pageTitle || sender?.tab?.title || "فيديو محمل";
+          if (isStoreBlockedUrl(pageUrl) || isStoreBlockedUrl(videoUrl)) {
+            sendResponse({ ok: false, message: "نسخة متجر Chrome Web Store لا تدعم التحميل من YouTube." });
+            break;
+          }
 
           const health = await callEngine("/api/health", "GET", null, 2000);
           const targetUrl =

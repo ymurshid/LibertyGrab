@@ -41,13 +41,13 @@
     <!-- تنبيه تشغيل المحرك المحلي -->
     <section id="offlineBanner" class="offline-banner hidden">
       <div class="offline-title">⚡ محرك LibertyGrab المحلي غير قيد التشغيل حالياً</div>
-      <p>
-        لدعم يوتيوب وفيسبوك وتيك توك وإنستجرام وX ودمج جودات <strong>1080p / 4K / MP3</strong>، شغّل ملف
-        <code>Start-Engine.vbs</code> الموجود داخل مجلد الأداة، ثم اضغط إعادة الفحص.
+      <p id="offlineDesc">
+        لدمج الجودات العالية <strong>1080p / 4K / MP3</strong> ودعم مئات المواقع، ثبّت أو شغّل محرك
+        <strong>LibertyGrab</strong> على جهازك ثم اضغط إعادة الفحص.
       </p>
       <div class="offline-actions">
-        <button id="retryEngineBtn" type="button" class="btn-secondary btn-sm">إعادة فحص الاتصال</button>
-        <button id="switchToSnifferBtn" type="button" class="btn-ghost btn-sm">استخدام التقاط المتصفح المباشر</button>
+        <button id="downloadEngineBtn" type="button" class="btn-secondary btn-sm">⬇ تحميل المحرك للويندوز (.exe)</button>
+        <button id="retryEngineBtn" type="button" class="btn-ghost btn-sm">إعادة الفحص</button>
       </div>
     </section>
 
@@ -215,6 +215,7 @@
     <div id="popupToast" class="popup-toast hidden"></div>
   </div>
 
+  <script src="config.js"></script>
   <script src="popup.js"></script>
 </body>
 </html>
